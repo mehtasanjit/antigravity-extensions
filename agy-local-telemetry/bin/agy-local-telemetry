@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Runs local-telemetry with Node's built-in SQLite (Node 22.5+; no dependencies).
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec node --disable-warning=ExperimentalWarning "${HERE}/cli.mjs" "$@"

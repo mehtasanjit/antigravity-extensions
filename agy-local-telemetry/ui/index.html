@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Antigravity usage · on this device · agy-local-telemetry</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='8' width='3' height='7' rx='1' fill='%232a78d6'/%3E%3Crect x='6.5' y='4' width='3' height='11' rx='1' fill='%231baf7a'/%3E%3Crect x='12' y='1' width='3' height='14' rx='1' fill='%23eb6834'/%3E%3C/svg%3E">
+  <!-- In the AGY 2.0 Hub this bridge provides the theme and the active conversation; standalone it's empty. -->
+  <script src="/preload.js"></script>
+  <style>
+    /* Navy ink on cool paper, cards on a quiet page. Inside the Hub, its theme tokens win. */
+    :root {
+      color-scheme: light;
+      --page: #f3f5f8; --surface-1: #ffffff; --surface-2: #e9eef4;
+      --ink: #17233b; --ink-2: #5b6678; --ink-3: #667084;
+      --line: #dce2ea; --axis: #b9c2cf;
+      --hub: #2a78d6; --cli: #1baf7a; --ide: #eb6834; --other: #e87ba4;
+      --input: #2a78d6; --cache: #8fb8ec; --output: #eb6834;
+      --good-bg: #e2f6e2; --good-ink: #136313; --warn-bg: #fdf0cc; --warn-ink: #7a4d00; --warn: #fab219;
+      --crit-bg: #fbe3e3; --crit-ink: #8f1f1f; --crit: #d03b3b; --info-bg: #e3eefb; --info-ink: #1f4f8f;
+      --up: #b42f2f; --down: #006300; --link: #1f63b8; --shadow: 0 1px 2px rgb(23 35 59 / 0.06);
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page: #0b111c; --surface-1: #121a2a; --surface-2: #1c2740;
+      --ink: #e8edf5; --ink-2: #a3aec0; --ink-3: #8692a6; --line: #243044; --axis: #56657f;
+      --hub: #3987e5; --cli: #199e70; --ide: #f07a46; --input: #3987e5; --cache: #2f5d97; --output: #f07a46;
+      --good-bg: #16361b; --good-ink: #8fe08f; --warn-bg: #3d2e08; --warn-ink: #f7cf6b; --crit-bg: #44191b; --crit-ink: #f2a1a1;
+      --info-bg: #1a2b47; --info-ink: #9cc3f2; --up: #e66767; --down: #4fcf4f; --link: #7fb2f0; --shadow: none;
+    }
+    /* Hub theme bridge: preload.js sets these on <html>; use them when present. */
+    :root.in-hub { --page: var(--background); --surface-1: var(--card); --surface-2: var(--secondary); --ink: var(--foreground);
+      --ink-2: var(--muted-foreground); --ink-3: var(--muted-foreground); --line: var(--border); --link: var(--primary); }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { background: var(--page); color: var(--ink); font: 14px/1.45 "Atkinson Hyperlegible Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    a { color: var(--link); text-decoration: none; cursor: pointer; } a:hover { text-decoration: underline; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    .num, td.n, th.n { font-variant-numeric: tabular-nums; }
+
+    /* top bar */
+    .topbar { position: sticky; top: 0; z-index: 5; background: var(--surface-1); border-bottom: 1px solid var(--line); }
+    .bar1 { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 10px 24px; }
+    .brand { font-weight: 750; font-size: 17px; margin-right: 6px; white-space: nowrap; }
+    .brand small { font-weight: 500; color: var(--ink-3); font-size: 12px; margin-left: 4px; }
+    .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+    .seg button { border: 0; background: transparent; padding: 4px 10px; border-radius: 6px; color: var(--ink-2); font-weight: 600; font-size: 13px; }
+    .seg button.on { background: var(--surface-1); color: var(--ink); box-shadow: var(--shadow); }
+    .spacer { flex: 1; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .bar2 { padding: 0 24px 10px; }
+    .filters select { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface-1); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; max-width: 220px; }
+    .filters select.set { border-color: var(--link); color: var(--link); font-weight: 600; }
+    .fstrip { max-width: 1320px; margin: 12px auto 0; padding: 0 24px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
+    .fstrip .f { display: inline-flex; gap: 6px; align-items: center; background: var(--info-bg); color: var(--info-ink); border-radius: 999px; padding: 3px 6px 3px 12px; font-weight: 600; }
+    .fstrip .f button { border: 0; background: transparent; color: inherit; font-weight: 800; padding: 0 4px; }
+    .fstrip a { margin-left: 4px; }
+    .pill { font-size: 12px; color: var(--ink-2); background: var(--surface-2); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+    .btn { background: var(--surface-1); border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; font-size: 13px; }
+    .btn:hover { background: var(--surface-2); } .btn:disabled { opacity: .6; cursor: wait; }
+    nav.sections { display: flex; gap: 4px; padding: 0 24px; overflow-x: auto; }
+    nav.sections a { padding: 9px 12px; color: var(--ink-2); font-weight: 600; font-size: 13px; border-bottom: 2px solid transparent; white-space: nowrap; }
+    nav.sections a.on { color: var(--link); border-bottom-color: var(--link); text-decoration: none; }
+
+    main { max-width: 1320px; margin: 0 auto; padding: 18px 24px 40px; }
+    .crumbs { margin: 0 0 12px; font-size: 13px; color: var(--ink-3); } .crumbs b { color: var(--ink); }
+    .grid { display: grid; gap: 14px; margin-bottom: 14px; }
+    .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card { background: var(--surface-1); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow); min-width: 0; }
+    .card h3 { margin: 0 0 2px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .card h3 .sub { font-weight: 500; font-size: 12px; color: var(--ink-3); }
+    .card .tools { margin-left: auto; display: flex; gap: 6px; }
+    .card .tools .btn { padding: 3px 10px; font-size: 12px; }
+    .label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+    .big { font-size: 28px; font-weight: 750; letter-spacing: -0.01em; margin: 4px 0 2px; }
+    .huge { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+    .huge small { font-size: 17px; font-weight: 500; color: var(--ink-2); letter-spacing: 0; }
+    .delta { font-size: 12px; color: var(--ink-2); } .delta.up { color: var(--up); } .delta.down { color: var(--down); } .delta.flat { color: var(--ink-3); }
+    .muted { color: var(--ink-3); } .small { font-size: 12px; }
+    .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 2px 0; } .kv span:first-child { color: var(--ink-2); }
+    .info { display: inline-flex; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); font-size: 10px; align-items: center; justify-content: center; color: var(--ink-3); cursor: help; font-weight: 700; }
+    .split { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface-2); margin: 12px 0 8px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .stats > div { padding: 0 14px; border-left: 1px solid var(--line); } .stats > div:first-child { border-left: 0; padding-left: 0; }
+    .stats .v { font-size: 20px; font-weight: 750; }
+
+
+    /* tables */
+    .tablewrap { overflow-x: auto; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 7px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
+    th { font-size: 12px; color: var(--ink-2); font-weight: 600; cursor: pointer; user-select: none; }
+    th.sorted::after { content: " ▾"; } th.sorted.asc::after { content: " ▴"; }
+    td.n, th.n { text-align: right; }
+    tbody tr.click { cursor: pointer; } tbody tr.click:hover td { background: var(--surface-2); }
+    td.wrap { white-space: normal; overflow-wrap: anywhere; min-width: 180px; }
+    td .strong, td b { font-weight: 700; }
+    .chip { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 8px; background: var(--surface-2); color: var(--ink-2); margin-right: 4px; white-space: nowrap; }
+    .chip.hub { background: color-mix(in srgb, var(--hub) 16%, transparent); color: var(--hub); }
+    .chip.cli { background: color-mix(in srgb, var(--cli) 16%, transparent); color: var(--cli); }
+    .chip.ide { background: color-mix(in srgb, var(--ide) 16%, transparent); color: var(--ide); }
+    .chip.warn { background: var(--warn-bg); color: var(--warn-ink); } .chip.crit { background: var(--crit-bg); color: var(--crit-ink); } .chip.good { background: var(--good-bg); color: var(--good-ink); }
+    .meter { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; min-width: 70px; } .meter span { display: block; height: 100%; background: var(--input); }
+
+    /* charts */
+    svg.chart { display: block; width: 100%; overflow: visible; }
+    svg.chart text { fill: var(--ink-3); font-size: 11px; }
+    svg.chart .grid line { stroke: var(--line); } svg.chart .base { stroke: var(--axis); }
+    svg.chart rect.hit:hover { opacity: .8; }
+    .hbars { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 6px 12px; align-items: center; margin-top: 12px; font-size: 12px; }
+    .hbars .l { text-align: right; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hbars .l a { color: var(--ink); }
+    .hbars .b { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .hbars .b .fill { height: 16px; border-radius: 0 3px 3px 0; display: flex; overflow: hidden; min-width: 2px; }
+    .hbars .b .v { font-weight: 700; white-space: nowrap; font-size: 12px; }
+
+    /* headers of drill-down pages */
+    .head { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
+    .avatar { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; background: color-mix(in srgb, var(--input) 18%, transparent); color: var(--input); }
+    .head h2 { margin: 0; font-size: 19px; overflow-wrap: anywhere; } .head .meta { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+    .headkpis { display: grid; grid-template-columns: repeat(4, minmax(110px, auto)); gap: 4px 26px; }
+    .headkpis .v { font-size: 20px; font-weight: 750; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .toolbar input { flex: 1; min-width: 200px; font: inherit; color: inherit; background: var(--surface-1); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+    .empty { padding: 26px 0; text-align: center; color: var(--ink-3); }
+    .error { color: var(--crit); }
+    .foot { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+
+    /* The Hub's side pane is narrow: one column, compact header, detail columns hidden. */
+    @media (max-width: 760px) {
+      .bar1, nav.sections { padding-left: 12px; padding-right: 12px; } main { padding: 12px; }
+      .g2, .g4 { grid-template-columns: 1fr 1fr; } .g2 { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; gap: 10px 0; } .stats > div:nth-child(3) { border-left: 0; padding-left: 0; }
+      .head { grid-template-columns: auto 1fr; } .headkpis { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+      .huge { font-size: 32px; } .x { display: none; } .brand small { display: none; }
+      .topbar { position: static; } #fresh { display: none; } .bar1 { gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+      .bar2 { padding: 0 12px 8px; } .bar2 .label { display: none; } .filters select { flex: 1; min-width: 0; max-width: none; } .fstrip { padding: 0 12px; }
+      td.wrap { min-width: 120px; } th, td { padding: 6px 7px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="bar1">
+      <span class="brand">Antigravity usage<small>on this device</small></span>
+      <span class="seg" id="surfaceSeg"></span>
+      <span class="seg" id="daysSeg"></span>
+      <span class="spacer"></span>
+      <span class="pill" id="fresh">—</span>
+      <button class="btn" id="refresh" title="Read new and changed conversations">Refresh</button>
+      <button class="btn" id="theme" title="Light or dark">◐</button>
+    </div>
+    <div class="bar2 filters">
+      <span class="label">Filter</span>
+      <select id="fRepo" title="Repository"></select>
+      <select id="fProject" title="Hub project"></select>
+      <select id="fModel" title="Model"></select>
+    </div>
+    <nav class="sections" id="nav"></nav>
+  </div>
+  <div class="fstrip" id="fstrip" hidden></div>
+  <main id="main"><div class="empty">Loading…</div></main>
+
+<script>
+'use strict';
+// ---------------------------------------------------------------- state & helpers
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n) => n == null ? '—' : Number(n).toLocaleString();
+const compact = (n) => n == null ? '—' : Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: n >= 1e9 ? 2 : 1 }).format(n);
+const pct = (v, d = 0) => v == null ? '—' : (100 * v).toFixed(d) + '%';
+const when = (ms) => ms ? new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const dayLabel = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const SURFACES = { hub: 'Hub', cli: 'CLI', ide: 'IDE' };
+const chip = (s) => `<span class="chip ${esc(s)}">${esc(SURFACES[s] || s)}</span>`;
+const color = (s) => `var(--${['hub', 'cli', 'ide'].includes(s) ? s : 'other'})`;
+const initials = (s) => (String(s).replace(/^.*\//, '').match(/[A-Za-z0-9]/g) || ['?']).slice(0, 2).join('').toUpperCase();
+const active = () => window.sidecar?.conversationId || null;
+const state = { days: localStorage.getItem('lt.days') || '30', surface: localStorage.getItem('lt.surface') || '',
+  repo: localStorage.getItem('lt.repo') || '', project: localStorage.getItem('lt.project') || '', model: localStorage.getItem('lt.model') || '' };
+const FILTERS = [['repo', 'fRepo', 'All repositories', 'Repository'], ['project', 'fProject', 'All Hub projects', 'Hub project'], ['model', 'fModel', 'All models', 'Model']];
+let optionNames = {};
+const tables = {}; // id -> { head, rows } for CSV
+
+async function api(path, params = {}) {
+  const filters = Object.fromEntries(['surface', 'repo', 'project', 'model'].filter((k) => state[k]).map((k) => [k, state[k]]));
+  const q = new URLSearchParams({ days: state.days, ...filters, ...params });
+  const res = await fetch(`${path}?${q}`);
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  return body;
+}
+
+// Change vs the previous period of the same length. Up is red for spend-like measures.
+function delta(cur, prev, { goodUp = false, points = false } = {}) {
+  if (prev == null || cur == null) return '';
+  if (points) {
+    const d = (cur - prev) * 100;
+    if (!isFinite(d)) return '';
+    const cls = Math.abs(d) < 0.5 ? 'flat' : (d > 0) === goodUp ? 'down' : 'up';
+    return `<span class="delta ${cls}">${cls === 'flat' ? '•' : d > 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(0)} pts vs previous</span>`;
+  }
+  if (!prev) return cur ? '<span class="delta flat">new in this range</span>' : '';
+  const r = (cur - prev) / prev;
+  const cls = Math.abs(r) < 0.005 ? 'flat' : (r > 0) === goodUp ? 'down' : 'up';
+  const txt = Math.abs(r) >= 10 ? `${(cur / prev).toFixed(1)}×` : `${Math.abs(r * 100).toFixed(0)}%`;
+  return `<span class="delta ${cls}">${r > 0 ? '▲' : r < 0 ? '▼' : '•'} ${txt} vs previous</span>`;
+}
+
+// ---------------------------------------------------------------- charts (SVG, no libraries)
+function niceMax(v) { if (v <= 0) return 1; const p = 10 ** Math.floor(Math.log10(v)); return [1, 2, 2.5, 5, 10].map((m) => m * p).find((m) => m >= v); }
+
+// Stacked columns. points: [{ label, parts: { key: value }, tip }]; series: [{ key, label, color }]
+function columns(points, series, { height = 220, fmtY = compact, marks = [] } = {}) {
+  if (!points.length) return '<div class="empty">No activity in this range.</div>';
+  // Drawn at the card's real width, so text never stretches (the Hub's side pane is narrow).
+  const W = Math.max(280, ($('main').clientWidth || 1000) - 84), H = height, L = 46, B = 22, T = 8, plotW = W - L - 6, plotH = H - B - T;
+  const max = niceMax(Math.max(...points.map((p) => series.reduce((s, x) => s + (p.parts[x.key] || 0), 0))));
+  const step = plotW / points.length, bw = Math.max(1, Math.min(42, step * 0.72));
+  let g = '<g class="grid">';
+  for (let i = 0; i <= 4; i++) { const y = T + plotH - (plotH * i) / 4; g += `<line x1="${L}" x2="${W}" y1="${y}" y2="${y}"/><text x="${L - 6}" y="${y + 4}" text-anchor="end">${esc(fmtY((max * i) / 4))}</text>`; }
+  g += `</g><line class="base" x1="${L}" x2="${W}" y1="${T + plotH}" y2="${T + plotH}"/>`;
+  const every = Math.ceil(points.length / Math.max(3, Math.floor(W / 110)));
+  const lastLabeled = Math.floor((points.length - 1) / every) * every;
+  points.forEach((p, i) => {
+    const x = L + i * step + (step - bw) / 2;
+    let y = T + plotH;
+    for (const s of series) {
+      const v = p.parts[s.key] || 0; if (!v) continue;
+      const h = (plotH * v) / max; y -= h;
+      g += `<rect class="hit" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h, 0.5).toFixed(1)}" rx="1.5" fill="${s.color}"><title>${esc(p.tip || p.label)}\n${esc(s.label)}: ${fmt(v)}</title></rect>`;
+    }
+    if (marks.includes(i)) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${T + 9}" text-anchor="middle" style="fill:var(--crit)">◆</text>`;
+    if (i % every === 0 || (i === points.length - 1 && i - lastLabeled >= every / 2)) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 5}" text-anchor="middle">${esc(p.label)}</text>`;
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" style="height:${height}px">${g}</svg>`;
+}
+
+// Horizontal bars with labels. items: [{ label, href, parts: [{ value, color }], value, note }]
+function hbars(items, { fmtV = compact } = {}) {
+  if (!items.length) return '<div class="empty">Nothing in this range.</div>';
+  const max = Math.max(...items.map((i) => i.value), 1);
+  return `<div class="hbars">${items.map((i) => `
+    <div class="l" title="${esc(i.label)}">${i.href ? `<a href="${esc(i.href)}">${esc(i.label)}</a>` : esc(i.label)}${i.note ? `<div class="muted">${esc(i.note)}</div>` : ''}</div>
+    <div class="b"><div class="fill" style="width:${(78 * i.value / max).toFixed(2)}%">${(i.parts || [{ value: i.value, color: 'var(--input)' }]).map((p) =>
+      `<span style="flex:${p.value};background:${p.color}" title="${esc(p.title || '')}"></span>`).join('')}</div><span class="v">${fmtV(i.value)}</span></div>`).join('')}</div>`;
+}
+
+// Full daily series (gaps shown) from the API's active days.
+function dailySeries(active, surfaces) {
+  if (!active.length) return [];
+  const by = Object.fromEntries(active.map((d) => [d.date, d]));
+  const today = new Date().toISOString().slice(0, 10);
+  const start = Number(state.days) >= 3650 ? active[0].date : new Date(Date.now() - (Number(state.days) - 1) * 864e5).toISOString().slice(0, 10);
+  const out = [];
+  for (let t = Date.parse(start + 'T00:00:00Z'); t <= Date.parse(today + 'T00:00:00Z'); t += 864e5) {
+    const date = new Date(t).toISOString().slice(0, 10);
+    const d = by[date] || { surfaces: {}, total: 0, calls: 0, sessions: 0 };
+    out.push({ label: dayLabel(date), parts: d.surfaces, tip: `${dayLabel(date)}: ${fmt(d.total)} tokens, ${fmt(d.calls)} calls, ${fmt(d.sessions)} sessions` });
+  }
+  return out;
+}
+const surfaceSeries = (list) => list.map((s) => ({ key: s, label: SURFACES[s] || s, color: color(s) }));
+const legend = (series) => `<div class="legend">${series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join('')}</div>`;
+
+// ---------------------------------------------------------------- tables (sortable, CSV)
+function table(id, cols, rows, { onClick, empty = 'Nothing in this range.' } = {}) {
+  tables[id] = { cols, rows, onClick, sort: tables[id]?.sort ?? null };
+  return `<div class="tablewrap" id="tw-${id}">${tableHtml(id)}</div>`;
+}
+function tableHtml(id) {
+  const t = tables[id];
+  let rows = [...t.rows];
+  if (t.sort) { const c = t.cols[t.sort.i]; rows.sort((a, b) => { const x = c.sort ? c.sort(a) : c.v(a), y = c.sort ? c.sort(b) : c.v(b); return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x ?? '').localeCompare(String(y ?? ''))) * (t.sort.asc ? 1 : -1); }); }
+  const head = t.cols.map((c, i) => `<th class="${c.n ? 'n ' : ''}${c.x ? 'x ' : ''}${t.sort?.i === i ? 'sorted' + (t.sort.asc ? ' asc' : '') : ''}" data-t="${id}" data-i="${i}">${c.h}</th>`).join('');
+  const body = rows.length ? rows.map((r, ri) => `<tr class="${t.onClick ? 'click' : ''}" data-t="${id}" data-r="${t.rows.indexOf(r)}">${t.cols.map((c) => `<td class="${c.n ? 'n ' : ''}${c.x ? 'x ' : ''}${c.wrap ? 'wrap' : ''}">${c.html ? c.html(r) : esc(c.v(r))}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${t.cols.length}" class="empty">Nothing in this range.</td></tr>`;
+  return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+document.addEventListener('click', (e) => {
+  const th = e.target.closest('th[data-t]');
+  if (th) { const t = tables[th.dataset.t], i = Number(th.dataset.i); t.sort = { i, asc: t.sort?.i === i ? !t.sort.asc : false }; $('tw-' + th.dataset.t).innerHTML = tableHtml(th.dataset.t); return; }
+  const tr = e.target.closest('tr[data-t]');
+  if (tr && !e.target.closest('a')) { const t = tables[tr.dataset.t]; if (t?.onClick) t.onClick(t.rows[Number(tr.dataset.r)]); return; }
+  const csv = e.target.closest('[data-csv]');
+  if (csv) downloadCsv(csv.dataset.csv);
+  const tog = e.target.closest('[data-toggle]');
+  if (tog) { const box = $(tog.dataset.toggle); const showTable = box.dataset.view !== 'table'; box.dataset.view = showTable ? 'table' : 'chart';
+    box.querySelector('.v-chart').hidden = showTable; box.querySelector('.v-table').hidden = !showTable; tog.textContent = showTable ? 'Chart' : 'Table'; }
+});
+function downloadCsv(id) {
+  const t = tables[id]; if (!t) return;
+  const cell = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const lines = [t.cols.map((c) => cell(c.csvH || c.h.replace(/<[^>]+>/g, ''))).join(','), ...t.rows.map((r) => t.cols.map((c) => cell(c.csv ? c.csv(r) : c.v(r))).join(','))];
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = `${id}-${state.days}d.csv`; a.click();
+}
+const csvBtn = (id) => `<button class="btn" data-csv="${id}">CSV</button>`;
+
+// Column sets reused across pages
+const tokenCols = [
+  { h: 'Tokens', n: 1, v: (r) => r.total, html: (r) => `<b>${compact(r.total)}</b>` },
+  { h: 'Calls', n: 1, v: (r) => r.calls, html: (r) => fmt(r.calls) },
+  { h: 'Sessions', n: 1, x: 1, v: (r) => r.sessions, html: (r) => fmt(r.sessions) },
+  { h: 'Cache hit', n: 1, x: 1, v: (r) => r.cacheHit, html: (r) => r.cacheHit == null ? '—' : pct(r.cacheHit) + (r.cacheHit < 0.5 && r.total > 2e5 ? ' <span class="chip warn">low</span>' : ''), csv: (r) => r.cacheHit == null ? '' : r.cacheHit.toFixed(3) },
+  { h: 'Tokens / call', n: 1, x: 1, v: (r) => r.perCall, html: (r) => compact(r.perCall) },
+];
+const sessionCols = [
+  { h: 'Conversation', wrap: 1, v: (r) => r.title || r.id, html: (r) => `${r.title ? esc(r.title) : `<span class="muted">${esc(r.id.slice(0, 8))}</span>`}${r.id === active() ? ' <span class="chip good">open</span>' : ''}${r.subagents ? ` <span class="chip">${r.subagents} subagent${r.subagents > 1 ? 's' : ''}</span>` : ''}` },
+  { h: 'Surface', v: (r) => r.surface, html: (r) => chip(r.surface) },
+  { h: 'Repository', x: 1, v: (r) => r.repository },
+  { h: 'Last active', x: 1, v: (r) => r.last, html: (r) => `<span class="muted">${when(r.last)}</span>`, csv: (r) => new Date(r.last).toISOString() },
+  { h: 'Turns', n: 1, x: 1, v: (r) => r.turns, html: (r) => fmt(r.turns) },
+  ...tokenCols.filter((c) => c.h !== 'Sessions'),
+  { h: 'Issues', x: 1, v: (r) => r.failed + r.compactions, html: (r) => `${r.failed ? `<span class="chip crit">${r.failed} failed</span>` : ''}${r.compactions ? `<span class="chip warn">${r.compactions} compaction${r.compactions > 1 ? 's' : ''}</span>` : ''}` },
+];
+const modelCols = [{ h: 'Model', v: (r) => r.model, html: (r) => `<a href="#model/${encodeURIComponent(r.model)}"><b>${esc(r.model)}</b></a>` }, { h: 'Surfaces', x: 1, v: (r) => (r.surfaces || []).join(' '), html: (r) => (r.surfaces || []).map(chip).join('') }, ...tokenCols, { h: 'Largest context', n: 1, x: 1, v: (r) => r.maxContext, html: (r) => compact(r.maxContext) }];
+const openSession = (r) => go(`conv/${encodeURIComponent(r.id)}`);
+
+function card(title, body, { sub = '', tools = '', id = '' } = {}) {
+  return `<section class="card" ${id ? `id="${id}"` : ''}><h3>${title}${sub ? `<span class="sub">${sub}</span>` : ''}<span class="tools">${tools}</span></h3>${body}</section>`;
+}
+// A chart card with a Table/Chart switch and CSV.
+function chartCard(id, title, chart, tableId, { sub = '', foot = '' } = {}) {
+  return `<section class="card" id="cc-${id}" data-view="chart"><h3>${title}${sub ? `<span class="sub">${sub}</span>` : ''}<span class="tools"><button class="btn" data-toggle="cc-${id}">Table</button>${csvBtn(tableId)}</span></h3>
+    <div class="v-chart">${chart}</div><div class="v-table" hidden>${table(tableId, tables[tableId].cols, tables[tableId].rows, { onClick: tables[tableId].onClick })}</div>${foot ? `<div class="foot">${foot}</div>` : ''}</section>`;
+}
+function tokenSplit(u) {
+  const parts = [['Input', u.input, 'var(--input)'], ['Cache read', u.cacheRead, 'var(--cache)'], ['Output', u.output, 'var(--output)']];
+  const tot = parts.reduce((s, p) => s + p[1], 0) || 1;
+  return `<div class="split">${parts.map(([l, v, c]) => `<span style="width:${(100 * v / tot).toFixed(2)}%;background:${c}" title="${l}: ${fmt(v)}"></span>`).join('')}</div>
+    <div class="legend">${parts.map(([l, v, c]) => `<span><i style="background:${c}"></i>${l} <b>${compact(v)}</b></span>`).join('')}<span>thinking ${compact(u.thinking)} (in output)</span></div>`;
+}
+function kpi(label, value, deltaHtml = '', sub = '') {
+  return `<div class="card"><div class="label">${label}</div><div class="big num">${value}</div>${deltaHtml}${sub ? `<div class="small muted">${sub}</div>` : ''}</div>`;
+}
+
+// ---------------------------------------------------------------- routing
+function route() { const [name, ...rest] = (location.hash.slice(1) || (active() ? 'current' : 'overview')).split('/'); return { name, arg: decodeURIComponent(rest.join('/')) }; }
+function go(hash) { location.hash = hash; }
+const SECTIONS = [['overview', 'Overview'], ['repos', 'Repositories'], ['projects', 'Hub projects'], ['models', 'Models'], ['convs', 'Conversations']];
+const SECTION_OF = { repo: 'repos', project: 'projects', model: 'models', conv: 'convs' };
+function nav(current) {
+  const tabs = active() ? [['current', 'This conversation'], ...SECTIONS] : SECTIONS;
+  const on = SECTION_OF[current] || current;
+  $('nav').innerHTML = tabs.map(([k, l]) => `<a href="#${k}" class="${on === k ? 'on' : ''}">${l}</a>`).join('');
+}
+function controls() {
+  const seg = (el, items, cur, key) => { $(el).innerHTML = items.map(([v, l]) => `<button data-${key}="${v}" class="${cur === v ? 'on' : ''}">${l}</button>`).join(''); };
+  seg('surfaceSeg', [['', 'All'], ['hub', 'Hub'], ['cli', 'CLI'], ['ide', 'IDE']], state.surface, 'surface');
+  seg('daysSeg', [['7', '7d'], ['30', '30d'], ['90', '90d'], ['3650', 'All']], state.days, 'days');
+}
+document.addEventListener('click', (e) => {
+  const s = e.target.closest('[data-surface]'), d = e.target.closest('[data-days]');
+  if (s) { state.surface = s.dataset.surface; localStorage.setItem('lt.surface', state.surface); controls(); render(); }
+  if (d) { state.days = d.dataset.days; localStorage.setItem('lt.days', state.days); controls(); render(); }
+});
+
+async function loadOptions() {
+  const o = await api('/api/options');
+  const lists = { repo: o.repos, project: o.projects, model: o.models };
+  optionNames = {};
+  for (const [k, id, all] of FILTERS) {
+    const items = lists[k];
+    for (const i of items) optionNames[`${k}:${i.key}`] = i.name;
+    const missing = state[k] && !items.some((i) => i.key === state[k]);
+    $(id).innerHTML = `<option value="">${all}</option>` + (missing ? `<option value="${esc(state[k])}">${esc(optionNames[`${k}:${state[k]}`] || state[k])} (none in range)</option>` : '') +
+      items.map((i) => `<option value="${esc(i.key)}">${esc(i.name)} · ${compact(i.total)}</option>`).join('');
+    $(id).value = state[k];
+    $(id).classList.toggle('set', !!state[k]);
+  }
+  const active = FILTERS.filter(([k]) => state[k]);
+  $('fstrip').hidden = !active.length;
+  $('fstrip').innerHTML = active.length ? `<span class="muted">Filtered by</span>${active.map(([k, , , label]) => `<span class="f">${label}: ${esc(optionNames[`${k}:${state[k]}`] || state[k])}<button data-clear="${k}" title="Remove">×</button></span>`).join('')}<a data-clear="all">Clear all</a>` : '';
+}
+function setFilter(k, v) { state[k] = v; localStorage.setItem('lt.' + k, v); render(); }
+for (const [k, id] of FILTERS) $(id).addEventListener('change', (e) => setFilter(k, e.target.value));
+document.addEventListener('click', (e) => { const c = e.target.closest('[data-clear]'); if (!c) return; if (c.dataset.clear === 'all') { for (const [k] of FILTERS) { state[k] = ''; localStorage.setItem('lt.' + k, ''); } render(); } else setFilter(c.dataset.clear, ''); });
+
+async function render() {
+  const r = route();
+  nav(r.name);
+  window.scrollTo(0, 0);
+  try {
+    await loadOptions();
+    if (r.name === 'current') return await renderConversation(active(), true);
+    if (r.name === 'repos') return await renderGroups('repo');
+    if (r.name === 'projects') return await renderGroups('project');
+    if (r.name === 'models') return await renderModels();
+    if (r.name === 'convs') return await renderConversations(Object.fromEntries(new URLSearchParams(r.arg)));
+    if (r.name === 'conv') return await renderConversation(r.arg, false);
+    if (['repo', 'project', 'model'].includes(r.name)) return await renderDetail(r.name, r.arg);
+    return await renderOverview();
+  } catch (e) {
+    $('main').innerHTML = `<div class="card error">Could not load: ${esc(e.message)}</div>`;
+  }
+}
+const rangeText = () => ({ 7: 'last 7 days', 30: 'last 30 days', 90: 'last 90 days', 3650: 'all time' })[state.days] + (state.surface ? ` · ${SURFACES[state.surface]} only` : '') + (FILTERS.some(([k]) => state[k]) ? ' · filtered' : '');
+
+// ---------------------------------------------------------------- pages
+async function renderOverview() {
+  const o = await api('/api/overview');
+  const t = o.totals, p = o.previous;
+  if (!$('fresh').textContent.startsWith('Demo')) $('fresh').textContent = o.lastCall ? `Last call ${when(o.lastCall)}` : 'No calls yet';
+
+  const headline = card(`Tokens in this range <span class="info" title="Input + cache read + output, as Antigravity records them for every model call made on this device.">i</span>`,
+    `<div class="huge num">${compact(t.total)} <small>tokens · ${fmt(t.calls)} model calls</small></div>${delta(t.total, p?.total)}
+     ${tokenSplit(t)}
+     <div class="stats">
+       <div><div class="label">Sessions</div><div class="v num">${fmt(t.sessions)}</div>${delta(t.sessions, p?.sessions, { goodUp: true })}</div>
+       <div><div class="label">Cache hit <span class="info" title="Share of the input read from the prompt cache. Higher is cheaper and faster.">i</span></div><div class="v num">${pct(t.cacheHit)}</div>${delta(t.cacheHit, p?.cacheHit, { points: true, goodUp: true })}</div>
+       <div><div class="label">Tokens per call</div><div class="v num">${compact(t.perCall)}</div>${delta(t.perCall, p?.perCall)}</div>
+       <div><div class="label">Repositories</div><div class="v num">${fmt(t.repositories)}</div><div class="small muted">largest context ${compact(t.maxContext)}</div></div>
+     </div>`, { sub: rangeText() });
+
+  const surfaces = o.surfaces.map((s) => s.surface);
+  const series = surfaceSeries(surfaces);
+  tables.daily = { cols: [{ h: 'Day', v: (r) => r.date }, ...surfaces.map((s) => ({ h: SURFACES[s] || s, n: 1, v: (r) => r.surfaces[s] || 0, html: (r) => compact(r.surfaces[s] || 0) })), { h: 'Total', n: 1, v: (r) => r.total, html: (r) => `<b>${compact(r.total)}</b>` }, { h: 'Calls', n: 1, v: (r) => r.calls }, { h: 'Sessions', n: 1, v: (r) => r.sessions }], rows: [...o.daily].reverse() };
+  const dailyCard = chartCard('daily', 'Daily usage', legend(series) + columns(dailySeries(o.daily, surfaces), series), 'daily', { sub: 'tokens per day, by surface' });
+
+  tables.models = { cols: modelCols, rows: o.models, onClick: (r) => go(`model/${encodeURIComponent(r.model)}`) };
+  const modelsCard = chartCard('models', 'Tokens by model', hbars(o.models.map((m) => ({ label: m.model, href: `#model/${encodeURIComponent(m.model)}`, value: m.total, note: `${fmt(m.calls)} calls · ${pct(m.cacheHit)} cache`,
+    parts: [{ value: m.input, color: 'var(--input)', title: 'input' }, { value: m.cacheRead, color: 'var(--cache)', title: 'cache read' }, { value: m.output, color: 'var(--output)', title: 'output' }] }))), 'models');
+  tables.toprepos = { cols: [{ h: 'Repository', wrap: 1, v: (r) => r.name, html: (r) => `<a href="#repo/${encodeURIComponent(r.key)}"><b>${esc(r.name)}</b></a>` }, { h: 'Surfaces', v: (r) => r.surfaces.join(' '), html: (r) => r.surfaces.map(chip).join('') }, ...tokenCols], rows: o.repositories, onClick: (r) => go(`repo/${encodeURIComponent(r.key)}`) };
+  const reposCard = chartCard('toprepos', 'Top repositories', hbars(o.repositories.map((r) => ({ label: r.name, href: `#repo/${encodeURIComponent(r.key)}`, value: r.total, note: `${fmt(r.sessions)} sessions`,
+    parts: r.surfaces.length === 1 ? [{ value: r.total, color: color(r.surfaces[0]) }] : [{ value: r.total, color: 'var(--input)' }] }))), 'toprepos', { foot: '<a href="#repos">All repositories →</a>' });
+
+  tables.surfaces = { cols: [{ h: 'Surface', v: (r) => r.surface, html: (r) => chip(r.surface) }, ...tokenCols, { h: 'Failed', n: 1, v: (r) => r.failed }, { h: 'Compactions', n: 1, x: 1, v: (r) => r.compactions }], rows: o.surfaces, onClick: (r) => { state.surface = r.surface; controls(); render(); } };
+
+  $('main').innerHTML = `<div class="grid">${headline}</div><div class="grid">${dailyCard}</div><div class="grid g2">${modelsCard}${reposCard}</div>` +
+    `<div class="grid">${card('By surface', table('surfaces', tables.surfaces.cols, tables.surfaces.rows, { onClick: tables.surfaces.onClick }), { tools: csvBtn('surfaces'), sub: 'click a row to show only that surface' })}</div>` +
+    `<div class="foot">Counted from the conversation files Antigravity keeps on this device. Not included: title and /btw calls (Antigravity doesn't write them locally) and conversations deleted before the first scan.</div>`;
+}
+
+async function renderGroups(by) {
+  const g = await api('/api/groups', { by });
+  const isP = by === 'project';
+  const cols = [
+    { h: isP ? 'Hub project' : 'Repository', wrap: 1, v: (r) => r.name, html: (r) => `<b>${esc(r.name)}</b>${isP && r.repository ? `<div class="small muted">${esc(r.repository)}</div>` : ''}` },
+    { h: 'Surfaces', v: (r) => r.surfaces.join(' '), html: (r) => r.surfaces.map(chip).join('') },
+    ...(isP ? [] : [{ h: 'Branches', x: 1, v: (r) => r.branches.join(' '), html: (r) => `<span class="muted">${esc(r.branches.slice(0, 3).join(', '))}${r.branches.length > 3 ? ` +${r.branches.length - 3}` : ''}</span>` }]),
+    ...tokenCols,
+    { h: 'vs previous', n: 1, x: 1, v: (r) => r.previousTotal == null ? null : r.total - r.previousTotal, html: (r) => delta(r.total, r.previousTotal).replace(' vs previous', '') },
+    { h: 'Last active', x: 1, v: (r) => r.last, html: (r) => `<span class="muted">${when(r.last)}</span>`, csv: (r) => new Date(r.last).toISOString() },
+  ];
+  tables.groups = { cols, rows: g.rows, onClick: (r) => go(`${isP ? 'project' : 'repo'}/${encodeURIComponent(r.key)}`) };
+  const chart = hbars(g.rows.slice(0, 12).map((r) => ({ label: r.name, href: `#${isP ? 'project' : 'repo'}/${encodeURIComponent(r.key)}`, value: r.total, note: isP ? r.repository : `${fmt(r.sessions)} sessions`,
+    parts: [{ value: r.input, color: 'var(--input)', title: 'input' }, { value: r.cacheRead, color: 'var(--cache)', title: 'cache read' }, { value: r.output, color: 'var(--output)', title: 'output' }] })));
+  $('main').innerHTML = `<div class="grid g2">${card(isP ? 'Hub projects by tokens' : 'Repositories by tokens', chart, { sub: rangeText() })}
+      ${card('How these are grouped', isP ? '<p class="small muted">A Hub project groups conversations in AGY 2.0. The device stores only its ID, so each project shows the repository most of its calls ran in. CLI conversations have no Hub project.</p>'
+        : '<p class="small muted">Repository = the git remote (e.g. owner/repo), else the git root folder, else the conversation\'s folder. Subagents count under their top-level conversation. <b>(outside project)</b> is the Hub\'s own label for conversations without a project; <b>(no workspace)</b> is a conversation without a folder.</p>')}</div>` +
+    `<div class="grid">${card(isP ? 'All Hub projects' : 'All repositories', table('groups', cols, g.rows, { onClick: tables.groups.onClick }), { tools: csvBtn('groups'), sub: 'click a row for its page' })}</div>`;
+}
+
+async function renderModels() {
+  const o = await api('/api/overview');
+  tables.allmodels = { cols: modelCols, rows: o.models, onClick: (r) => go(`model/${encodeURIComponent(r.model)}`) };
+  const share = o.models.map((m) => ({ label: m.model, href: `#model/${encodeURIComponent(m.model)}`, value: m.calls, note: `${compact(m.total)} tokens`, parts: [{ value: m.calls, color: 'var(--input)' }] }));
+  $('main').innerHTML = `<div class="grid g2">${card('Model calls by model', hbars(share, { fmtV: fmt }), { sub: rangeText() })}${card('Cache hit by model', hbars(o.models.filter((m) => m.cacheHit != null).map((m) => ({ label: m.model, href: `#model/${encodeURIComponent(m.model)}`, value: m.cacheHit, parts: [{ value: m.cacheHit, color: 'var(--cache)' }] })), { fmtV: (v) => pct(v) }), { sub: 'share of input read from cache' })}</div>` +
+    `<div class="grid">${card('All models', table('allmodels', modelCols, o.models, { onClick: tables.allmodels.onClick }), { tools: csvBtn('allmodels') })}</div>`;
+}
+
+async function renderDetail(kind, key) {
+  const d = await api('/api/detail', { kind, key });
+  const section = { repo: ['Repositories', '#repos'], project: ['Hub projects', '#projects'], model: ['Models', '#models'] }[kind];
+  const crumbs = `<div class="crumbs"><a href="#overview">← Overview</a> / <a href="${section[1]}">${section[0]}</a> / <b>${esc(d.name || key)}</b></div>`;
+  if (!d.found) { $('main').innerHTML = crumbs + '<div class="card empty">Nothing recorded in this range. Try a longer period.</div>'; return; }
+  const t = d.totals, p = d.previous;
+  const meta = [kind === 'project' && d.repository ? `mostly ${esc(d.repository)}` : '', d.branches.length ? `branches: ${esc(d.branches.slice(0, 4).join(', '))}${d.branches.length > 4 ? '…' : ''}` : '', `first call ${when(t.first)}, last ${when(t.last)}`].filter(Boolean).join(' · ');
+  const head = `<section class="card"><div class="head"><div class="avatar">${esc(initials(d.name))}</div>
+      <div><h2>${esc(d.name)}</h2><div class="meta">${meta}</div><div style="margin-top:6px">${d.surfaces.map(chip).join('')}${t.failed ? `<span class="chip crit">${t.failed} failed</span>` : ''}${t.compactions ? `<span class="chip warn">${t.compactions} compactions</span>` : ''}</div></div>
+      <div class="headkpis">
+        <div><div class="label">Tokens</div><div class="v num">${compact(t.total)}</div>${delta(t.total, p?.total)}</div>
+        <div><div class="label">Calls · sessions</div><div class="v num">${fmt(t.calls)} · ${fmt(t.sessions)}</div>${delta(t.calls, p?.calls)}</div>
+        <div><div class="label">Cache hit</div><div class="v num">${pct(t.cacheHit)}</div>${delta(t.cacheHit, p?.cacheHit, { points: true, goodUp: true })}</div>
+        <div><div class="label">Tokens per session</div><div class="v num">${compact(t.sessions ? t.total / t.sessions : null)}</div>${delta(t.sessions ? t.total / t.sessions : null, p?.sessions ? p.total / p.sessions : null)}</div>
+      </div></div></section>`;
+  const series = surfaceSeries(d.surfaces);
+  tables.ddaily = { cols: [{ h: 'Day', v: (r) => r.date }, { h: 'Tokens', n: 1, v: (r) => r.total, html: (r) => `<b>${compact(r.total)}</b>` }, { h: 'Calls', n: 1, v: (r) => r.calls }, { h: 'Sessions', n: 1, v: (r) => r.sessions }], rows: [...d.daily].reverse() };
+  let second = '';
+  if (kind === 'model') {
+    tables.drepos = { cols: [{ h: 'Repository', wrap: 1, v: (r) => r.name, html: (r) => `<a href="#repo/${encodeURIComponent(r.key)}"><b>${esc(r.name)}</b></a>` }, { h: 'Surfaces', v: (r) => r.surfaces.join(' '), html: (r) => r.surfaces.map(chip).join('') }, ...tokenCols], rows: d.repositories, onClick: (r) => go(`repo/${encodeURIComponent(r.key)}`) };
+    second = card('Repositories using this model', table('drepos', tables.drepos.cols, d.repositories, { onClick: tables.drepos.onClick }), { tools: csvBtn('drepos') });
+  } else {
+    tables.dmodels = { cols: modelCols, rows: d.models, onClick: (r) => go(`model/${encodeURIComponent(r.model)}`) };
+    second = card('Models used here', table('dmodels', modelCols, d.models, { onClick: tables.dmodels.onClick }), { tools: csvBtn('dmodels') });
+  }
+  tables.dsessions = { cols: sessionCols, rows: d.sessions, onClick: openSession };
+  $('main').innerHTML = crumbs + `<div class="grid">${head}</div><div class="grid">${chartCard('ddaily', 'Daily usage', legend(series) + columns(dailySeries(d.daily, d.surfaces), series), 'ddaily', { sub: rangeText() })}</div>` +
+    `<div class="grid">${second}</div><div class="grid">${card('Most expensive sessions', table('dsessions', sessionCols, d.sessions, { onClick: openSession }), { tools: csvBtn('dsessions'), sub: 'top 50 by tokens' })}</div>`;
+}
+
+async function renderConversations(f) {
+  const params = { ...f };
+  const c = await api('/api/conversations', params);
+  tables.sessions = { cols: sessionCols, rows: c.rows, onClick: openSession };
+  const sorts = [['recent', 'Recent'], ['total', 'Most tokens'], ['failed', 'With failures'], ['compactions', 'Ran out of context'], ['coldcache', 'Low cache hit']];
+  const qs = (extra) => 'convs/' + new URLSearchParams(Object.fromEntries(Object.entries({ ...f, ...extra }).filter(([, v]) => v))).toString();
+  $('main').innerHTML = `<div class="toolbar"><input id="q" placeholder="Search title, repository, branch, model or ID" value="${esc(f.q || '')}">
+      <span class="seg">${sorts.map(([k, l]) => `<button class="${(c.sort || 'recent') === k ? 'on' : ''}" data-go="${esc(qs({ sort: k }))}">${l}</button>`).join('')}</span></div>` +
+    `<div class="grid">${card(`${fmt(c.rows.length)} conversation${c.rows.length === 1 ? '' : 's'}`, table('sessions', sessionCols, c.rows, { onClick: openSession }), { tools: csvBtn('sessions'), sub: rangeText() })}</div>`;
+  $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(qs({ q: e.target.value })); });
+  document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
+}
+
+async function renderConversation(id, isCurrent) {
+  if (!id) { $('main').innerHTML = '<div class="card empty">No conversation is open.</div>'; return; }
+  const d = await api('/api/conversation', { id });
+  const crumbs = isCurrent ? '' : `<div class="crumbs"><a href="#overview">← Overview</a> / <a href="#convs">Conversations</a> / <b>${esc(d.session?.title || id.slice(0, 8))}</b></div>`;
+  if (!d.found) { $('main').innerHTML = crumbs + `<div class="card empty">No calls recorded yet for ${esc(id.slice(0, 8))}. Press Refresh after its first answer.</div>`; return; }
+  const s = d.session;
+  const meta = [`<a href="#repo/${encodeURIComponent(s.repoKey)}">${esc(s.repository)}</a>`, s.branch ? `branch ${esc(s.branch)}` : '', s.project ? `<a href="#project/${encodeURIComponent(s.project)}">Hub project ${esc(s.project.slice(0, 8))}</a>` : '', `${when(s.first)} → ${when(s.last)}`].filter(Boolean).join(' · ');
+  const head = `<section class="card"><div class="head"><div class="avatar">${chip(s.surface).replace(/<[^>]+>/g, '').slice(0, 3)}</div>
+      <div><h2>${esc(s.title || 'Untitled conversation')}</h2><div class="meta">${meta}</div><div style="margin-top:6px">${chip(s.surface)}${s.models.map((m) => `<span class="chip">${esc(m)}</span>`).join('')}${s.subagents ? `<span class="chip">${s.subagents} subagents</span>` : ''}${s.failed ? `<span class="chip crit">${s.failed} failed</span>` : ''}${s.compactions ? `<span class="chip warn">${s.compactions} compactions</span>` : ''}</div><div class="meta">ID ${esc(s.id)}</div></div>
+      <div class="headkpis">
+        <div><div class="label">Tokens</div><div class="v num">${compact(s.total)}</div></div>
+        <div><div class="label">Turns · calls</div><div class="v num">${fmt(s.turns)} · ${fmt(s.calls)}</div></div>
+        <div><div class="label">Cache hit</div><div class="v num">${pct(s.cacheHit)}</div></div>
+        <div><div class="label">Largest context</div><div class="v num">${compact(s.maxContext)}</div></div>
+      </div></div></section>`;
+  // Context per call: how big the prompt grew, what came from cache, where it was compacted or failed.
+  const calls = d.calls;
+  const marks = calls.map((c, i) => (c.kind === 'compaction' ? i : -1)).filter((i) => i >= 0);
+  const points = calls.map((c, i) => ({ label: `#${i + 1}`, parts: c.failed ? { failed: 1 } : { fresh: c.context - c.cacheRead, cached: c.cacheRead },
+    tip: `Call ${i + 1} · turn ${c.turn ?? '?'} · ${c.model}${c.kind === 'compaction' ? ' · compaction' : ''}${c.failed ? ' · FAILED: ' + (c.error || '') : ''}\n${when(c.ts)}\ncontext ${fmt(c.context)} · output ${fmt(c.output)}` }));
+  const ctxSeries = [{ key: 'cached', label: 'Context from cache', color: 'var(--cache)' }, { key: 'fresh', label: 'New input', color: 'var(--input)' }, { key: 'failed', label: 'Failed call', color: 'var(--crit)' }];
+  tables.calls = { cols: [{ h: '#', v: (r) => calls.indexOf(r) + 1 }, { h: 'Turn', n: 1, v: (r) => r.turn }, { h: 'Time', x: 1, v: (r) => r.ts, html: (r) => `<span class="muted">${when(r.ts)}</span>`, csv: (r) => new Date(r.ts).toISOString() }, { h: 'Model', v: (r) => r.model },
+    { h: 'Context', n: 1, v: (r) => r.context, html: (r) => compact(r.context) }, { h: 'From cache', n: 1, x: 1, v: (r) => r.cacheRead, html: (r) => compact(r.cacheRead) }, { h: 'Output', n: 1, v: (r) => r.output, html: (r) => compact(r.output) },
+    { h: 'Note', x: 1, v: (r) => r.failed ? 'failed' : r.kind, html: (r) => r.failed ? `<span class="chip crit" title="${esc(r.error || '')}">failed</span>` : r.kind === 'compaction' ? '<span class="chip warn">compaction</span>' : '' }], rows: calls };
+  const ctxCard = chartCard('calls', 'Context per call', legend(ctxSeries) + columns(points, ctxSeries, { height: 200, marks }), 'calls', { sub: 'main conversation, in order · ◆ = compaction', foot: 'Each column is one model call: its whole prompt, split into what came from the cache and what was new. A steady climb is the conversation growing; a drop after ◆ is a compaction.' });
+  tables.turns = { cols: [{ h: '#', v: (r) => d.turns.indexOf(r) + 1, html: (r) => `${d.turns.indexOf(r) + 1}${r.subagent ? ' <span class="chip">subagent</span>' : ''}` }, { h: 'Time', v: (r) => r.last, html: (r) => `<span class="muted">${when(r.last)}</span>`, csv: (r) => new Date(r.last).toISOString() }, { h: 'Models', x: 1, v: (r) => r.models.join(' ') },
+    ...tokenCols.filter((c) => !['Sessions'].includes(c.h)), { h: 'Issues', x: 1, v: (r) => r.failed + r.compactions, html: (r) => `${r.failed ? `<span class="chip crit" title="${esc(r.errors.join('; '))}">${r.failed} failed</span>` : ''}${r.compactions ? '<span class="chip warn">compaction</span>' : ''}` }], rows: d.turns };
+  tables.cmodels = { cols: modelCols, rows: d.models, onClick: (r) => go(`model/${encodeURIComponent(r.model)}`) };
+  $('main').innerHTML = crumbs + `<div class="grid">${head}</div><div class="grid">${ctxCard}</div>` +
+    `<div class="grid">${card('Turn by turn', table('turns', tables.turns.cols, d.turns), { tools: csvBtn('turns'), sub: 'time = when the turn\'s last call started' })}</div>` +
+    `<div class="grid">${card('Models', table('cmodels', modelCols, d.models, { onClick: tables.cmodels.onClick }), { tools: csvBtn('cmodels') })}</div>`;
+}
+
+// ---------------------------------------------------------------- refresh, theme, start
+async function refresh(quiet = false) {
+  const b = $('refresh');
+  b.disabled = true; b.textContent = 'Reading…';
+  try {
+    const r = await api('/api/scan');
+    if (r.demo) { $('fresh').textContent = 'Demo · made-up data'; $('fresh').style.background = 'var(--warn-bg)'; $('fresh').style.color = 'var(--warn-ink)'; await render(); return; }
+    $('fresh').textContent = r.newCalls ? `${fmt(r.newCalls)} new call${r.newCalls > 1 ? 's' : ''} · ${new Date().toLocaleTimeString()}` : `Up to date · ${new Date().toLocaleTimeString()}`;
+    await render();
+  } catch (e) {
+    $('fresh').innerHTML = `<span class="error">Refresh failed: ${esc(e.message)}</span>`;
+  } finally { b.disabled = false; b.textContent = 'Refresh'; }
+}
+function applyTheme() {
+  const inHub = !!window.sidecar && getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+  document.documentElement.classList.toggle('in-hub', !!inHub);
+  const pref = localStorage.getItem('lt.theme');
+  const dark = pref ? pref === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+}
+$('theme').addEventListener('click', () => { localStorage.setItem('lt.theme', document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); applyTheme(); });
+$('refresh').addEventListener('click', () => refresh());
+window.addEventListener('hashchange', render);
+let resizeTimer; let lastWidth = innerWidth;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (Math.abs(innerWidth - lastWidth) > 40) { lastWidth = innerWidth; render(); } }, 250); });
+let lastConversation = active();
+setInterval(() => { const c = active(); if (c !== lastConversation) { lastConversation = c; applyTheme(); render(); } }, 1500);
+applyTheme(); controls(); refresh(true);
+</script>
+</body>
+</html>

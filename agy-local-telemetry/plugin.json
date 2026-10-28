@@ -1,0 +1,5 @@
+{
+  "name": "agy-local-telemetry",
+  "description": "Antigravity usage on this device: tokens and model calls of AGY 2.0, agy CLI and IDE conversations, by repository, Hub project, model and conversation. Reads only Antigravity's local files; nothing leaves the machine.",
+  "logo": "assets/logo.svg"
+}

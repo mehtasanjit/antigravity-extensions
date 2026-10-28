@@ -1,0 +1,7 @@
+{
+  "name": "agy-local-telemetry-sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AGY 2.0 Hub sidecar for agy-local-telemetry"
+}
