@@ -15,6 +15,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# agy-local-telemetry's code lives in lib/ (not a Python build folder)
+!agy-local-telemetry/lib/
 lib64/
 parts/
 sdist/

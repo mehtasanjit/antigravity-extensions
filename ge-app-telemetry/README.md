@@ -8,6 +8,8 @@ Turn Google Antigravity usage logs into **BigQuery datasets, ready-made views an
 > [!NOTE]
 > **Scope.** This module covers one pipeline: **Cloud Logging → Log Router sink → BigQuery**. Logs are stored in a locked RAW BigQuery dataset and exposed through authorized BigQuery views and a dashboard. Other destinations (for example Pub/Sub, Cloud SQL or Log Analytics) are **out of scope** for now; the folder layout will be reorganised if one is added.
 
+For the wider picture (Gemini Enterprise logging settings, sharing reports, and restricting Antigravity per user with custom roles), see the [governance guide](../docs/gemini_enterprise_antigravity_governance_guide.md).
+
 ---
 
 ## Contents
