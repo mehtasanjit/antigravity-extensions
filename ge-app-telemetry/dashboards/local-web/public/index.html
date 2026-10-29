@@ -262,7 +262,10 @@ function summaryRow() {
 // ----------------------------------------------------------------------------
 function renderOverview() {
   const { row, scope } = summaryRow(); const r = row || {};
-  const sub = `Rolling ${state.windowDays} days (${state.windowDays} × 24 h) · ${scope}` + (state.client ? ' · client filter not applied' : '');
+  // The window summaries exist per user or per model, not per user and model: with both selected,
+  // these figures are the user's across all models, and say so.
+  const sub = `Rolling ${state.windowDays} days (${state.windowDays} × 24 h) · ${scope}` + (state.client ? ' · client filter not applied' : '')
+    + (state.user && state.model ? ' · model filter not applied' : '');
   kpiCards('ov-kpis', [
     { label: 'Active users', value: fmt(r.active_users), sub },
     { label: 'Inferences', value: fmt(r.inferences), sub },

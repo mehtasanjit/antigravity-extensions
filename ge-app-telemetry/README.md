@@ -76,7 +76,7 @@ For the wider picture (Gemini Enterprise logging settings, sharing reports, and 
 ┌────────────────────────────────────────────────────────────────────────┐
 │  VIEWS dataset  ge_app_agy_telemetry    (owners + whoever you share it) │
 │  user_summary · adoption · trust_quality · token_economics ·           │
-│  model_summary · daily_sessions                    — no prompt text    │
+│  model_summary · daily_sessions · code_citations   — no prompt text    │
 └───────────────────┬───────────────────────────────┬────────────────────┘
                     ▼                               ▼
            Local web dashboard              Looker Studio / BigQuery
@@ -322,7 +322,7 @@ cd ge-app-telemetry/dashboards/local-web
 - Fetched data is stored in `data/`, which is git-ignored because it contains user emails.
 
 > [!WARNING]
-> The local server has **no login** and listens on all network interfaces. Use it on trusted machines and networks only, and stop it when you're done (`./stop.sh`).
+> The local server has **no login**. By default it listens on this machine only (`127.0.0.1`). If you start it with `HOST=0.0.0.0`, anyone who can reach the port can see the data, including user emails. Use it on trusted machines and networks only, and stop it when you're done (`./stop.sh`).
 
 **Global controls**
 | Control | Applies to |
@@ -617,7 +617,7 @@ How it works:
 Things to know:
 - Entries are stored **with all fields, including prompts and responses**, exactly like the sink stores them.
 - Cloud Logging keeps entries in the `_Default` bucket for **30 days** unless you changed the bucket's retention, so older activity can't be recovered.
-- Rows older than the RAW retention (`--retention-days`) are dropped by BigQuery's partition expiration.
+- The window never reaches further back than the RAW retention (`--retention-days`): it's cut at that point, with a warning, because older rows would land in partitions BigQuery has already expired.
 - Run it as a project **Owner** (RAW is owners-only), with `roles/logging.viewer` on the source project.
 - Large windows are read into memory; for heavy usage, backfill a few days at a time.
 
@@ -777,9 +777,10 @@ ge-app-telemetry/
 │   ├── 03_v_ge_app_agy_token_economics.sql
 │   ├── 04_v_ge_app_agy_model_summary.sql
 │   ├── 05_v_ge_app_agy_daily_sessions.sql
+│   ├── 06_v_ge_app_agy_code_citations.sql
 │   ├── deploy_views.sh               # Deploys + authorizes the views
 │   └── README.md                     # View-by-view details
 ├── dashboards/local-web/             # Local web dashboard (Node.js + Chart.js)
 ├── tools/view-validation/            # Synthetic-data test for every view
-└── docs/                             # Internal design notes
+└── docs/                             # Design decisions (ADRs)
 ```

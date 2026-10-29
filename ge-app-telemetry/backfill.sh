@@ -110,7 +110,8 @@ Options:
 Notes:
   - Cloud Logging keeps entries in the _Default bucket for 30 days unless you changed it,
     so older entries cannot be backfilled.
-  - Rows older than the RAW retention (partition expiration) are dropped by BigQuery.
+  - The window never reaches further back than the RAW retention (partition expiration):
+    it is cut at that point, with a warning.
 
 Examples:
   # Preview the last 7 days:
@@ -297,6 +298,27 @@ if ! ds_out=$(bq show "${IMPERSONATE_FLAGS[@]+"${IMPERSONATE_FLAGS[@]}"}" "${DES
   exit 1
 fi
 log_success "RAW dataset verified: ${DEST_PROJECT_ID}:${RAW_DATASET_ID}"
+
+# Entries older than RAW's retention would land in partitions BigQuery has already expired, so the
+# window starts at the retention boundary (plus an hour of margin) instead.
+to_epoch() { date -u -d "$1" +%s 2>/dev/null || date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$1" +%s 2>/dev/null; }
+from_epoch() { date -u -d "@$1" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -r "$1" +"%Y-%m-%dT%H:%M:%SZ"; }
+RETENTION_MS=$(bq show "${IMPERSONATE_FLAGS[@]+"${IMPERSONATE_FLAGS[@]}"}" --format=json \
+  "${DEST_PROJECT_ID}:${RAW_DATASET_ID}.${TABLE_PREFIX}${STREAM_LIST[0]}" 2>/dev/null \
+  | jq -r '.timePartitioning.expirationMs // empty' 2>/dev/null || true)
+if [[ "$RETENTION_MS" =~ ^[0-9]+$ ]] && (( RETENTION_MS > 0 )); then
+  OLDEST_EPOCH=$(( $(date -u +%s) - RETENTION_MS / 1000 + 3600 ))
+  if START_EPOCH=$(to_epoch "$START_TIME") && [[ -n "$START_EPOCH" ]] && (( START_EPOCH < OLDEST_EPOCH )); then
+    NEW_START=$(from_epoch "$OLDEST_EPOCH")
+    log_warn "RAW keeps $(( RETENTION_MS / 86400000 )) days of data: the window starts at ${NEW_START} instead of ${START_TIME}."
+    START_TIME="$NEW_START"
+    END_EPOCH=$(to_epoch "$END_TIME" || true)
+    if [[ -n "$END_EPOCH" ]] && (( END_EPOCH <= OLDEST_EPOCH )); then
+      log_warn "The whole window is older than RAW's retention: nothing to backfill."
+      exit 0
+    fi
+  fi
+fi
 
 # ------------------------------------------------------------------------------
 # Plan
