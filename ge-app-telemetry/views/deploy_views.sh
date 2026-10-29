@@ -246,6 +246,18 @@ if [[ -z "$PROJECT_ID" ]]; then
   exit 1
 fi
 
+# IDs are substituted into the view SQL with sed, so reject anything unexpected.
+if ! [[ "$PROJECT_ID" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
+  log_error "Invalid project ID '${PROJECT_ID}'."
+  exit 1
+fi
+for id in "$DATASET_ID" "$RAW_DATASET_ID"; do
+  if ! [[ "$id" =~ ^[A-Za-z0-9_]+$ ]]; then
+    log_error "Invalid dataset ID '${id}' (letters, digits and underscores only)."
+    exit 1
+  fi
+done
+
 log_info "Target Project : ${PROJECT_ID}"
 log_info "Views Dataset  : ${DATASET_ID}"
 log_info "RAW Dataset    : ${RAW_DATASET_ID}"

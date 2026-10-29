@@ -276,6 +276,20 @@ fi
 
 DEST_PROJECT_ID="${DEST_PROJECT_ID:-$PROJECT_ID}"
 
+# IDs end up in gcloud filters and bq delete targets, so reject anything unexpected.
+for id in "$PROJECT_ID" "$DEST_PROJECT_ID"; do
+  if ! [[ "$id" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
+    log_error "Invalid project ID '${id}'."
+    exit 1
+  fi
+done
+for id in "$DATASET_ID" "$RAW_DATASET_ID"; do
+  if ! [[ "$id" =~ ^[A-Za-z0-9_]+$ ]]; then
+    log_error "Invalid dataset ID '${id}' (letters, digits and underscores only)."
+    exit 1
+  fi
+done
+
 # Fail fast on expired/missing credentials instead of misreporting "not found".
 if ! auth_out=$(gcloud auth print-access-token 2>&1 > /dev/null); then
   log_error "gcloud credentials are not usable: ${auth_out}"

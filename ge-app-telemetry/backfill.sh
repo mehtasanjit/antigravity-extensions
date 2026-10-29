@@ -245,6 +245,18 @@ if [[ -z "$PROJECT_ID" ]]; then
 fi
 DEST_PROJECT_ID="${DEST_PROJECT_ID:-$PROJECT_ID}"
 
+# IDs end up in gcloud filters and bq resource names, so reject anything unexpected.
+for id in "$PROJECT_ID" "$DEST_PROJECT_ID"; do
+  if ! [[ "$id" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
+    log_error "Invalid project ID '${id}'."
+    exit 1
+  fi
+done
+if ! [[ "$RAW_DATASET_ID" =~ ^[A-Za-z0-9_]+$ ]]; then
+  log_error "Invalid dataset ID '${RAW_DATASET_ID}' (letters, digits and underscores only)."
+  exit 1
+fi
+
 if [[ "$SKIP_EXISTING" != "true" && "$SKIP_EXISTING" != "false" ]]; then
   log_error "--skip-existing must be true or false (got '${SKIP_EXISTING}')."
   exit 1

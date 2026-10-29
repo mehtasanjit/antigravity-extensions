@@ -402,6 +402,19 @@ DEST_PROJECT_ID="${DEST_PROJECT_ID:-$PROJECT_ID}"
 # ------------------------------------------------------------------------------
 # Input Validation
 # ------------------------------------------------------------------------------
+# IDs end up in gcloud filters, bq resource names and SQL, so reject anything unexpected.
+for id in "$PROJECT_ID" "$DEST_PROJECT_ID"; do
+  if ! [[ "$id" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
+    log_error "Invalid project ID '${id}'."
+    exit 1
+  fi
+done
+for id in "$DATASET_ID" "$RAW_DATASET_ID"; do
+  if ! [[ "$id" =~ ^[A-Za-z0-9_]+$ ]]; then
+    log_error "Invalid dataset ID '${id}' (letters, digits and underscores only)."
+    exit 1
+  fi
+done
 if ! [[ "$PARTITION_EXPIRATION_DAYS" =~ ^[0-9]+$ ]]; then
   log_error "Retention days must be a non-negative integer (got '${PARTITION_EXPIRATION_DAYS}')."
   exit 1
